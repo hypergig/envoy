@@ -64,7 +64,7 @@ def envoy_test_linkopts():
 
         # TODO(mattklein123): It's not great that we universally link against the following libs.
         # In particular, -latomic is not needed on all platforms. Make this more granular.
-        "//conditions:default": ["-pthread", "-latomic"],
+        "//conditions:default": ["-pthread", "-latomic", "-ldl"],
     })
 
 # References to Envoy external dependencies should be wrapped with this function.
