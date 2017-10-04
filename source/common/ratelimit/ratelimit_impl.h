@@ -7,9 +7,10 @@
 
 #include "envoy/grpc/async_client.h"
 #include "envoy/ratelimit/ratelimit.h"
-#include "envoy/tracing/context.h"
+#include "envoy/tracing/http_tracer.h"
 #include "envoy/upstream/cluster_manager.h"
 
+#include "common/common/empty_string.h"
 #include "common/ratelimit/ratelimit.pb.h"
 
 #include "api/bootstrap.pb.h"
@@ -39,8 +40,7 @@ public:
   // RateLimit::Client
   void cancel() override;
   void limit(RequestCallbacks& callbacks, const std::string& domain,
-             const std::vector<Descriptor>& descriptors,
-             const Tracing::TransportContext& context) override;
+             const std::vector<Descriptor>& descriptors, Tracing::Span& parent_span) override;
 
   // Grpc::AsyncRequestCallbacks
   void onCreateInitialMetadata(Http::HeaderMap& metadata) override;
@@ -53,7 +53,6 @@ private:
   Grpc::AsyncRequest* request_{};
   Optional<std::chrono::milliseconds> timeout_;
   RequestCallbacks* callbacks_{};
-  Tracing::TransportContext context_;
 };
 
 class GrpcFactoryImpl : public ClientFactory {
@@ -74,7 +73,7 @@ public:
   // RateLimit::Client
   void cancel() override {}
   void limit(RequestCallbacks& callbacks, const std::string&, const std::vector<Descriptor>&,
-             const Tracing::TransportContext&) override {
+             Tracing::Span&) override {
     callbacks.complete(LimitStatus::OK);
   }
 };

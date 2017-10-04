@@ -15,8 +15,7 @@ namespace Zipkin {
 
 ZipkinSpan::ZipkinSpan(Zipkin::Span& span, Zipkin::Tracer& tracer) : span_(span), tracer_(tracer) {}
 
-void ZipkinSpan::finishSpan(Tracing::SpanFinalizer& finalizer) {
-  finalizer.finalize(*this);
+void ZipkinSpan::finishSpan() {
   span_.finish();
 }
 

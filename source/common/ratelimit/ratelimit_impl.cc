@@ -5,10 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "envoy/tracing/context.h"
-
 #include "common/common/assert.h"
-#include "common/common/empty_string.h"
 #include "common/grpc/async_client_impl.h"
 #include "common/http/headers.h"
 
@@ -21,7 +18,8 @@ GrpcClientImpl::GrpcClientImpl(RateLimitAsyncClientPtr&& async_client,
                                const Optional<std::chrono::milliseconds>& timeout)
     : service_method_(*Protobuf::DescriptorPool::generated_pool()->FindMethodByName(
           "pb.lyft.ratelimit.RateLimitService.ShouldRateLimit")),
-      async_client_(std::move(async_client)), timeout_(timeout) {}
+      async_client_(std::move(async_client)), timeout_(timeout) {
+}
 
 GrpcClientImpl::~GrpcClientImpl() { ASSERT(!callbacks_); }
 
@@ -47,24 +45,19 @@ void GrpcClientImpl::createRequest(pb::lyft::ratelimit::RateLimitRequest& reques
 
 void GrpcClientImpl::limit(RequestCallbacks& callbacks, const std::string& domain,
                            const std::vector<Descriptor>& descriptors,
-                           const Tracing::TransportContext& context) {
+                           const std::string& request_id, Tracing::Span& parent_span) {
   ASSERT(callbacks_ == nullptr);
   callbacks_ = &callbacks;
-  context_ = context;
 
   pb::lyft::ratelimit::RateLimitRequest request;
   createRequest(request, domain, descriptors);
 
-  request_ = async_client_->send(service_method_, request, *this, timeout_);
+  request_ = async_client_->send(service_method_, request, *this, parent_span, timeout_);
 }
 
 void GrpcClientImpl::onCreateInitialMetadata(Http::HeaderMap& metadata) {
-  if (!context_.request_id_.empty()) {
-    metadata.insertRequestId().value(context_.request_id_);
-  }
-
-  if (!context_.span_context_.empty()) {
-    metadata.insertOtSpanContext().value(context_.span_context_);
+  if (!request_id_.empty()) {
+    metadata.insertRequestId().value(request_id_);
   }
 }
 
@@ -99,6 +92,23 @@ ClientPtr GrpcFactoryImpl::create(const Optional<std::chrono::milliseconds>& tim
           new Grpc::AsyncClientImpl<pb::lyft::ratelimit::RateLimitRequest,
                                     pb::lyft::ratelimit::RateLimitResponse>(cm_, cluster_name_)},
       timeout)};
+}
+
+void RateLimitSpanFinalizer::finalize(Tracing::Span& span) {
+  if (response_ != nullptr) {
+    if (response_->overall_code() == pb::lyft::ratelimit::RateLimitResponse_Code_OVER_LIMIT) {
+      span.setTag("ratelimit_status", "over_limit");
+    } else {
+      span.setTag("ratelimit_status", "ok");
+    }
+  }
+}
+
+Tracing::SpanFinalizerPtr
+RateLimitSpanFinalizerFactoryImpl::create(const pb::lyft::ratelimit::RateLimitRequest&,
+                                          const pb::lyft::ratelimit::RateLimitResponse* response) {
+  Tracing::SpanFinalizerPtr finalizer{new RateLimitSpanFinalizer(response)};
+  return finalizer;
 }
 
 } // namespace RateLimit

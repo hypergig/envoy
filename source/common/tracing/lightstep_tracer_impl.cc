@@ -18,8 +18,7 @@ namespace Tracing {
 LightStepSpan::LightStepSpan(lightstep::Span& span, lightstep::Tracer& tracer)
     : span_(span), tracer_(tracer) {}
 
-void LightStepSpan::finishSpan(SpanFinalizer& finalizer) {
-  finalizer.finalize(*this);
+void LightStepSpan::finishSpan() {
   span_.Finish();
 }
 

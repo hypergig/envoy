@@ -18,15 +18,15 @@ namespace Envoy {
 namespace Tracing {
 
 // TODO(mattklein123) PERF: Avoid string creations/copies in this entire file.
-static std::string buildResponseCode(const Http::AccessLog::RequestInfo& info) {
+/*static std::string buildResponseCode(const Http::AccessLog::RequestInfo& info) {
   return info.responseCode().valid() ? std::to_string(info.responseCode().value()) : "0";
-}
+}*/
 
-static std::string valueOrDefault(const Http::HeaderEntry* header, const char* default_value) {
+/*static std::string valueOrDefault(const Http::HeaderEntry* header, const char* default_value) {
   return header ? header->value().c_str() : default_value;
-}
+}*/
 
-static std::string buildUrl(const Http::HeaderMap& request_headers) {
+/*static std::string buildUrl(const Http::HeaderMap& request_headers) {
   std::string path = request_headers.EnvoyOriginalPath()
                          ? request_headers.EnvoyOriginalPath()->value().c_str()
                          : request_headers.Path()->value().c_str();
@@ -37,7 +37,7 @@ static std::string buildUrl(const Http::HeaderMap& request_headers) {
 
   return fmt::format("{}://{}{}", valueOrDefault(request_headers.ForwardedProto(), ""),
                      valueOrDefault(request_headers.Host(), ""), path);
-}
+}*/
 
 void HttpTracerUtility::mutateHeaders(Http::HeaderMap& request_headers, Runtime::Loader& runtime) {
   if (!request_headers.RequestId()) {
@@ -115,7 +115,7 @@ Decision HttpTracerUtility::isTracing(const Http::AccessLog::RequestInfo& reques
   NOT_REACHED;
 }
 
-HttpConnManFinalizerImpl::HttpConnManFinalizerImpl(Http::HeaderMap* request_headers,
+/*HttpConnManFinalizerImpl::HttpConnManFinalizerImpl(Http::HeaderMap* request_headers,
                                                    Http::AccessLog::RequestInfo& request_info,
                                                    Config& tracing_config)
     : request_headers_(request_headers), request_info_(request_info),
@@ -161,7 +161,7 @@ void HttpConnManFinalizerImpl::finalize(Span& span) {
       Http::CodeUtility::is5xx(request_info_.responseCode().value())) {
     span.setTag("error", "true");
   }
-}
+}*/
 
 HttpTracerImpl::HttpTracerImpl(DriverPtr&& driver, const LocalInfo::LocalInfo& local_info)
     : driver_(std::move(driver)), local_info_(local_info) {}
